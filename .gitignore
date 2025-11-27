@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Outputs
+outputs/
+results/
+*.log
+*_checkpoint.json
+
+# Audio cache
+audio_cache/
+
+# OS
+.DS_Store
+Thumbs.db
