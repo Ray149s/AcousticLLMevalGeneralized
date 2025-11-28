@@ -246,7 +246,7 @@ class SalmonnWrapper(AudioCaptioningModel):
             try:
                 # These imports will work after adding to sys.path
                 from omegaconf import OmegaConf
-                from model import SALMONN  # SALMONN's internal model class
+                from models.salmonn import SALMONN  # SALMONN's internal model class
 
             except ImportError as e:
                 raise ImportError(
