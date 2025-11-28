@@ -4,7 +4,7 @@
 
 **GitHub Repo:** https://github.com/Ray149s/AcousticLLMevalGeneralized
 
-**Last Updated:** 2025-11-28 (end of session)
+**Last Updated:** 2025-11-28 (team synchronized)
 
 ---
 
@@ -177,10 +177,34 @@ python run_naturelm_test.py
 ## Parent Project
 Original Gemini evaluation: `C:\Users\Raymond\Documents\School\UCSD\Courses\2025 Fall\GenAI\AcousticLLMEval`
 
-## Role Structure
-- User: Project owner
-- Claude: CEO coordinating research-orchestrator agent
-- Goal: Generalize Gemini pipeline to open-weights models
+## Team Structure & Agent Capabilities
+
+### Core Team
+| Role | Member | Responsibilities |
+|------|--------|------------------|
+| **Project Owner** | Raymond | Strategic direction, resource allocation, final approval |
+| **CEO** | Claude (Main Agent) | Coordinate agents, strategic planning, synthesize results |
+| **Research Orchestrator** | Specialized Agent | Execute workflows, delegate tasks, track experiments |
+
+### Available Specialized Agents
+| Agent | Capabilities | Status |
+|-------|-------------|--------|
+| `experiment-runner` | Batch processing, checkpointing, parallel execution | Ready |
+| `results-analyzer` | SPIDEr/BLEU metrics, statistical testing | Ready |
+| `bioacoustic-data-manager` | Dataset prep, audio preprocessing, taxonomy | Ready |
+| `salmonn-restoration-engineer` | Fix broken multimodal LLMs, version debugging | Ready |
+| `report-generator` | Publication-quality reports, LaTeX tables | Ready |
+| `visualization-architect` | Charts, heatmaps, comparison plots | Ready |
+| `model-comparison-analyst` | Rigorous model comparisons, tradeoff analysis | Ready |
+| `cost-monitor` | API cost tracking, budget optimization | Ready |
+
+### Communication Protocols
+- **Project Owner ↔ CEO**: Resource requests, strategic decisions
+- **CEO ↔ Orchestrator**: Task delegation, progress updates
+- **Orchestrator ↔ Agents**: Task specifications via YAML format
+
+### Project Goal
+Generalize Gemini evaluation pipeline to open-weights models (Qwen, NatureLM, SALMONN)
 
 ---
 
@@ -190,3 +214,24 @@ Original Gemini evaluation: `C:\Users\Raymond\Documents\School\UCSD\Courses\2025
 |------|-----------------|
 | 2025-11-27 | Initial framework, Colab setup, identified model issues |
 | 2025-11-28 | Lambda H100 testing, fixed Qwen & NatureLM, SALMONN partial |
+| 2025-11-28 | Team synchronization: Research Orchestrator briefed, all agents aligned |
+
+## Team Synchronization Status
+
+**Last Sync:** 2025-11-28
+
+### Readiness Assessment
+- Research Orchestrator: BRIEFED ✅
+- All specialized agents: READY FOR DEPLOYMENT ✅
+- Infrastructure validated: ✅
+- Evaluation pipeline tested: ✅
+
+### Execution Plan (Approved)
+1. **[P0] SALMONN Fix**: Deploy `salmonn-restoration-engineer`
+2. **[P1] Full Evaluation**: Run Qwen + NatureLM on 500 samples (parallel)
+3. **[P2] Results Analysis**: SPIDEr scores via `results-analyzer`
+4. **[P3] Final Report**: Publication figures and documentation
+
+### Blockers
+- HuggingFace token required from Project Owner
+- Lambda H100 status confirmation needed
