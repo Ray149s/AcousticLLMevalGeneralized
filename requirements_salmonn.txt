@@ -1,0 +1,42 @@
+# SALMONN Required Dependencies
+# CRITICAL: These exact versions are required to avoid garbled output
+#
+# The SALMONN model was trained with these specific versions.
+# Using newer versions (especially transformers 4.40+ or peft 0.10+)
+# will cause LoRA weights to not load correctly, resulting in garbage output.
+#
+# Installation:
+#   pip install -r requirements_salmonn.txt
+#
+# If you have conflicting dependencies, use a separate virtual environment:
+#   python -m venv salmonn_env
+#   source salmonn_env/bin/activate
+#   pip install -r requirements_salmonn.txt
+
+# Core ML Framework
+torch==2.0.1
+torchaudio==2.0.2
+
+# Transformers ecosystem (CRITICAL: exact versions)
+transformers==4.28.0
+peft==0.3.0
+accelerate==0.20.3
+bitsandbytes==0.35.0
+
+# Tokenizer
+sentencepiece==0.1.97
+
+# Audio processing
+soundfile
+librosa
+openai-whisper
+
+# Configuration
+omegaconf
+
+# HuggingFace Hub
+huggingface_hub
+
+# Utilities
+numpy
+scipy

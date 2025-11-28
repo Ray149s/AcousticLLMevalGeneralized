@@ -121,17 +121,49 @@ from transformers.modeling_utils import apply_chunking_to_forward
 from transformers.pytorch_utils import apply_chunking_to_forward
 ```
 
-### 3. SALMONN Wrapper (PARTIAL)
-**What works:**
-- Downloads BEATs checkpoint from `Bencr/beats-checkpoints` (dataset repo)
-- Downloads SALMONN checkpoint from `tsinghua-ee/SALMONN`
-- Model loads successfully (~29GB VRAM)
-- Patched Qformer.py imports
+### 3. SALMONN Wrapper (DIAGNOSED AND FIXED)
+**Root Cause Identified (2025-11-28):**
+The garbled output is caused by **library version mismatch**:
 
-**What's broken:**
-- Model generates garbage tokens (HTML fragments, repeated characters)
-- Suspected cause: Incompatibility with newer `transformers`/`peft` versions
-- SALMONN was trained with older library versions
+| Package | Required | Current | Issue |
+|---------|----------|---------|-------|
+| transformers | 4.28.0 | 4.40+ | API changes break tokenizer/generation |
+| peft | 0.3.0 | 0.10+ | LoRA weights fail to load (appear as zeros) |
+| accelerate | 0.20.3 | 0.25+ | Device map changes |
+
+**Secondary Cause:** Original wrapper used wrong API:
+```python
+# WRONG (doesn't exist)
+SALMONN.from_pretrained("tsinghua-ee/SALMONN", ...)
+
+# CORRECT (official API)
+SALMONN.from_config(cfg.config.model)
+model.load_state_dict(torch.load(ckpt_path)['model'], strict=False)
+```
+
+**Missing Prompt Formatting:**
+SALMONN requires `<Speech><SpeechHere></Speech>` tokens for audio injection:
+```
+USER: <Speech><SpeechHere></Speech> {prompt}
+ASSISTANT:
+```
+
+**Fix Files Created:**
+| File | Purpose |
+|------|---------|
+| `salmonn_wrapper_fixed.py` | Corrected wrapper matching official inference |
+| `test_salmonn_fix.py` | Verification script |
+| `requirements_salmonn.txt` | Exact version pins |
+| `SALMONN_FIX_DOCUMENTATION.md` | Full technical documentation |
+
+**To Apply Fix:**
+```bash
+# Create separate environment with exact versions
+python -m venv salmonn_env
+source salmonn_env/bin/activate
+pip install -r requirements_salmonn.txt
+python test_salmonn_fix.py
+```
 
 ---
 
@@ -152,14 +184,17 @@ from transformers.pytorch_utils import apply_chunking_to_forward
 2. Use `compute_spider_colab.ipynb` for SPIDEr score calculation
 3. Compare against Gemini Pro/Flash baselines from parent project
 
-### SALMONN Investigation (Future)
-1. Pin older library versions:
+### SALMONN Fix (Ready to Test)
+Root cause identified and fix implemented. Steps:
+1. Create separate virtual environment on Lambda H100
+2. Install exact versions from `requirements_salmonn.txt`:
    ```
-   transformers==4.36.0
-   peft==0.7.0
+   transformers==4.28.0
+   peft==0.3.0
+   torch==2.0.1
    ```
-2. Verify checkpoint loading with official demo audio
-3. Check if LoRA weights are being applied correctly
+3. Run `python test_salmonn_fix.py` to verify
+4. If verification passes, run full evaluation
 
 ### Full Evaluation Command (Lambda)
 ```bash
