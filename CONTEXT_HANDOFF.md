@@ -19,12 +19,14 @@ A generalized bioacoustic LLM evaluation framework supporting:
 |------|---------|
 | `base_model.py` | Abstract interface all wrappers inherit from |
 | `naturelm_wrapper.py` | NatureLM implementation (FIXED) |
-| `salmonn_wrapper.py` | SALMONN implementation (loads but garbled output) |
+| `salmonn_wrapper.py` | SALMONN implementation (marked as future work) |
 | `qwen_wrapper.py` | Qwen2-Audio-7B implementation (FIXED) |
 | `universal_evaluator.py` | Model-agnostic evaluation with checkpoint/resume |
 | `model_registry.py` | Centralized model management |
 | `colab_orchestrator.ipynb` | Main Colab notebook |
 | `animalspeak_spider_benchmark.jsonl` | 500-sample benchmark dataset |
+| `prompt_config.py` | **NEW** 4 prompt roles + 3 shot configs (matches Gemini) |
+| `run_full_evaluation.py` | **NEW** Full 24-config evaluation runner |
 
 ---
 
@@ -261,11 +263,42 @@ Generalize Gemini evaluation pipeline to open-weights models (Qwen, NatureLM, SA
 - Infrastructure validated: ✅
 - Evaluation pipeline tested: ✅
 
-### Execution Plan (Approved)
-1. **[P0] SALMONN Fix**: Deploy `salmonn-restoration-engineer`
-2. **[P1] Full Evaluation**: Run Qwen + NatureLM on 500 samples (parallel)
-3. **[P2] Results Analysis**: SPIDEr scores via `results-analyzer`
-4. **[P3] Final Report**: Publication figures and documentation
+### Execution Plan (Updated 2025-11-28)
+1. **[P0] SALMONN Fix**: ~~Deploy `salmonn-restoration-engineer`~~ → MARKED AS FUTURE WORK
+2. **[P0.5] Prompt Roles & Shots**: ✅ COMPLETED
+   - All 4 prompt roles ported from Gemini (baseline, ornithologist, skeptical, multi-taxa)
+   - All 3 shot configs (0, 3, 5-shot) with text-only in-context learning
+   - 24 total configurations per model (4 prompts × 3 shots)
+3. **[P1] Full Evaluation**: Run Qwen + NatureLM on 500 samples (24 configs each)
+   - **Status**: READY TO RUN (Lambda offline)
+   - **Command**: `python run_full_evaluation.py --models qwen naturelm`
+4. **[P2] Results Analysis**: SPIDEr scores via `results-analyzer`
+5. **[P3] Final Report**: Publication figures and documentation
+
+### P0.5 Completion Details (2025-11-28)
+**Files Created:**
+- `prompt_config.py`: Exact prompt roles from Gemini evaluation
+- `run_full_evaluation.py`: Full evaluation runner
+
+**Verification Test Results (Qwen, 10 samples):**
+```
+Config                                    Success  Avg Latency
+--------------------------------------------------------------
+qwen_baseline_0shot                         10/10       0.33s
+qwen_baseline_3shot                         10/10       0.55s
+qwen_baseline_5shot                         10/10       0.61s
+qwen_ornithologist_0shot                    10/10       0.85s
+qwen_ornithologist_3shot                    10/10       0.94s
+qwen_ornithologist_5shot                    10/10       1.46s
+qwen_skeptical_0shot                        10/10       1.49s
+qwen_skeptical_3shot                        10/10       0.56s
+qwen_skeptical_5shot                        10/10       0.61s
+qwen_multi-taxa_0shot                       10/10       1.48s
+qwen_multi-taxa_3shot                       10/10       1.33s
+qwen_multi-taxa_5shot                       10/10       1.76s
+
+Total time: 2.1 minutes (12/12 configs completed)
+```
 
 ### Blockers
 - HuggingFace token required from Project Owner
