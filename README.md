@@ -1,17 +1,20 @@
 # AcousticLLMevalGeneralized
 
-**Unified Audio Captioning Model Evaluation Framework**
+**Multi-Model Bioacoustic Captioning Evaluation Framework**
 
-A production-ready abstraction layer for evaluating multiple audio captioning models (NatureLM, SALMONN) on bioacoustic datasets. Designed for resource-constrained environments like Google Colab with aggressive VRAM management.
+A generalized framework for evaluating audio-language models on bioacoustic captioning tasks. Extends the Gemini evaluation pipeline to open-weights models (Qwen2-Audio, NatureLM).
 
 ---
 
-## Features
+## Evaluation Status
 
-- **Unified Interface**: Abstract base class (`AudioCaptioningModel`) ensures consistent API across all models
-- **Memory-Safe**: Built-in VRAM checks and aggressive cleanup for sequential evaluations
-- **Model Registry**: Centralized discovery and instantiation of available models
-- **Production-Ready**: Proper error handling, warm-up inference, and comprehensive documentation
+| Model | Status | Configs | Samples | Total Predictions |
+|-------|--------|---------|---------|-------------------|
+| **Qwen2-Audio-7B** | Complete | 12 | 500 | 6,000 |
+| **NatureLM-audio** | Complete | 12 | 500 | 6,000 |
+| SALMONN | Future Work | - | - | - |
+
+**Total: 24,000 predictions** across 24 configurations (2 models x 4 prompts x 3 shots)
 
 ---
 
@@ -19,293 +22,188 @@ A production-ready abstraction layer for evaluating multiple audio captioning mo
 
 ```
 AcousticLLMevalGeneralized/
-├── base_model.py                      # Abstract base class for all models
-├── naturelm_wrapper.py                # NatureLM-audio implementation
-├── salmonn_wrapper.py                 # SALMONN implementation
-├── model_registry.py                  # Model discovery and factory
-├── universal_evaluator.py             # Model-agnostic evaluation framework
-├── colab_orchestrator.ipynb           # Production Colab notebook
-├── validate_pipeline.py               # Pipeline validation suite
+├── base_model.py                      # Abstract interface for model wrappers
+├── qwen_wrapper.py                    # Qwen2-Audio-7B-Instruct wrapper
+├── naturelm_wrapper.py                # NatureLM-audio wrapper
+├── prompt_config.py                   # 4 prompt roles + 3 shot configurations
+├── run_full_evaluation.py             # Main evaluation runner
+├── colab_orchestrator.ipynb           # Google Colab notebook for evaluation
+├── compute_spider_colab.ipynb         # SPIDEr score computation (multi-model)
 ├── animalspeak_spider_benchmark.jsonl # Benchmark dataset (500 samples)
-├── requirements.txt                   # Dependencies
-├── __init__.py                        # Package initialization
-└── README.md                          # This file
+├── requirements_eval_env.txt          # Tested dependencies (Lambda H100)
+├── outputs/
+│   └── lambda_full_eval/              # Evaluation results (24 JSON files)
+└── salmonn_future_work/               # SALMONN implementation (future work)
 ```
 
 ---
 
-## Installation
+## Supported Models
 
-### Prerequisites
+### Qwen2-Audio-7B-Instruct
+- **Provider**: Alibaba Qwen
+- **VRAM**: ~14GB (BF16)
+- **Status**: Fully implemented and tested
+- **HuggingFace**: [Qwen/Qwen2-Audio-7B-Instruct](https://huggingface.co/Qwen/Qwen2-Audio-7B-Instruct)
 
-- Python 3.10+
-- CUDA-capable GPU (10GB+ VRAM recommended)
-- HuggingFace account with Llama-3.1 access
+### NatureLM-audio
+- **Provider**: Earth Species Project
+- **VRAM**: ~10GB (BF16)
+- **Status**: Fully implemented and tested
+- **HuggingFace**: [EarthSpeciesProject/NatureLM-audio](https://huggingface.co/EarthSpeciesProject/NatureLM-audio)
 
-### Setup
+### SALMONN (Future Work)
+- **Provider**: ByteDance/Tsinghua
+- **VRAM**: ~29GB (FP16)
+- **Status**: Requires separate environment due to dependency conflicts
+- **Documentation**: See `salmonn_future_work/SALMONN_FIX_DOCUMENTATION.md`
 
-```bash
-# 1. Clone NatureLM repository
-git clone https://github.com/earthspecies/NatureLM-audio
-cd NatureLM-audio
+---
 
-# 2. Install dependencies
-pip install -e .[gpu]  # or pip install -e . for CPU-only
+## Evaluation Configuration
 
-# 3. Set up HuggingFace authentication
-export HF_TOKEN="your_token_here"
-huggingface-cli login
+### Prompt Roles (4)
+| Role | Description |
+|------|-------------|
+| `baseline` | Standard captioning prompt |
+| `ornithologist` | Expert birder persona |
+| `skeptical` | Conservative, uncertainty-aware |
+| `multi-taxa` | Multi-species detection focus |
 
-# 4. Request Llama-3.1 access
-# Visit: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
-```
+### Shot Configurations (3)
+- **0-shot**: No examples
+- **3-shot**: 3 text-only examples
+- **5-shot**: 5 text-only examples
 
 ---
 
 ## Quick Start
 
-### Basic Usage
+### Prerequisites
+- Python 3.10+
+- CUDA GPU with 16GB+ VRAM (or use Google Colab A100)
+- HuggingFace account with model access
 
-```python
-from model_registry import get_model
+### Local Evaluation
 
-# Instantiate model
-model = get_model("naturelm")
+```bash
+# Install dependencies
+pip install -r requirements_eval_env.txt
 
-# Check VRAM availability
-if model.check_memory_availability():
-    # Load model
-    model.load_model()
+# Run evaluation (both models, all configs)
+python run_full_evaluation.py --models qwen naturelm --output-dir ./outputs/eval
 
-    # Generate caption
-    caption = model.generate_caption(
-        "path/to/audio.mp3",
-        "What is the common name for the focal species in the audio?"
-    )
-    print(caption)
-    # Output: "#0.00s - 10.00s#: Green Treefrog\n"
-
-    # Clean up VRAM
-    model.unload()
-else:
-    print("Insufficient VRAM!")
+# Run specific configuration
+python run_full_evaluation.py --models qwen --prompts baseline --shots 3 --max-samples 100
 ```
 
-### Batch Processing
+### Google Colab
 
-```python
-from model_registry import get_model
+1. Upload `colab_orchestrator.ipynb` to Google Colab
+2. Set runtime to A100 GPU
+3. Run all cells (restart after Step 2 for Pillow fix)
+4. Results saved to Google Drive
 
-model = get_model("naturelm")
-model.load_model()
+### SPIDEr Score Computation
 
-audio_paths = ["audio1.mp3", "audio2.mp3", "audio3.mp3"]
-prompts = ["What species is this?"] * 3
+1. Upload `compute_spider_colab.ipynb` to Google Colab
+2. Upload result JSON files from `outputs/lambda_full_eval/`
+3. Run all cells
+4. Download SPIDEr scores
 
-captions = model.generate_captions_batch(audio_paths, prompts)
+---
 
-for path, caption in zip(audio_paths, captions):
-    print(f"{path}: {caption}")
+## Output Format
 
-model.unload()
-```
+Each evaluation produces a JSON file:
 
-### Model Discovery
-
-```python
-from model_registry import ModelRegistry
-
-registry = ModelRegistry()
-
-# List all models
-registry.print_model_summary()
-
-# Filter by VRAM constraint
-small_models = registry.list_models(max_vram_gb=12.0)
-
-# Check compatibility
-compat = registry.check_model_compatibility("naturelm", available_vram_gb=10.0)
-if compat['can_run']:
-    print("Model is compatible!")
+```json
+{
+  "model": "qwen",
+  "prompt_version": "baseline",
+  "n_shots": 3,
+  "samples_tested": 500,
+  "successful": 500,
+  "avg_latency": 0.97,
+  "results": [
+    {
+      "id": 15107,
+      "species": "Squirrel Treefrog",
+      "reference": "a chorus of squirrel treefrogs...",
+      "prediction": "Frogs calling near water...",
+      "latency": 0.74,
+      "success": true
+    }
+  ]
+}
 ```
 
 ---
 
-## Implemented Models
+## Results Summary
 
-### NatureLM-audio
+### Average Latency by Model
+| Model | 0-shot | 3-shot | 5-shot |
+|-------|--------|--------|--------|
+| Qwen2-Audio | 0.74s | 0.97s | 1.50s |
+| NatureLM | 0.97s | 1.23s | 1.35s |
 
-- **Status**: ✅ Implemented
-- **Architecture**: Llama-3.1-8B-Instruct fine-tuned on bioacoustic data
-- **VRAM**: ~10GB (peak with bfloat16)
-- **Specialization**: Species classification, audio captioning, lifestage identification
-- **Reference**: Robinson et al. (2025), ICLR 2025
-- **HuggingFace**: [EarthSpeciesProject/NatureLM-audio](https://huggingface.co/EarthSpeciesProject/NatureLM-audio)
-
-### SALMONN
-
-- **Status**: ✅ Implemented
-- **Architecture**: Multi-modal audio understanding (speech, music, events)
-- **VRAM**: ~16GB (with 8-bit quantization)
-- **Specialization**: General audio understanding, speech recognition, audio event classification
-- **Reference**: Tang et al. (2024), ICLR 2024
-- **HuggingFace**: [tsinghua-ee/SALMONN](https://huggingface.co/tsinghua-ee/SALMONN)
+### Success Rate
+All configurations achieved **100% success rate** (500/500 samples).
 
 ---
 
 ## API Reference
 
-### `AudioCaptioningModel` (Abstract Base Class)
-
-**Methods:**
-
-- `load_model()` - Load model weights and initialize inference
-- `generate_caption(audio_path, prompt)` - Generate caption for single audio file
-- `get_memory_requirements()` - Return VRAM requirements dict
-- `check_memory_availability()` - Verify VRAM before loading
-- `unload()` - Aggressively free VRAM
-- `is_loaded()` - Check if model is currently loaded
-
-### `NatureLMWrapper`
-
-Extends `AudioCaptioningModel` with NatureLM-specific features:
-
-- `generate_captions_batch(audio_paths, prompts)` - Batch inference
-- Sliding window audio processing (configurable window/hop length)
-- Automatic warm-up inference for stable VRAM
-
-**Constructor Args:**
-- `model_name` (str): Human-readable identifier
-- `window_length_seconds` (float): Audio chunk size (default: 10.0)
-- `hop_length_seconds` (float): Stride between windows (default: 10.0)
-- `device` (str): Target device ('cuda' or 'cpu')
-
-### `ModelRegistry`
-
-**Methods:**
-
-- `list_models(status_filter, max_vram_gb)` - List models with filtering
-- `get_model(model_id, **kwargs)` - Instantiate model wrapper
-- `get_model_info(model_id)` - Get detailed metadata
-- `get_implemented_models()` - List ready-to-use models
-- `check_model_compatibility(model_id, available_vram_gb)` - Compatibility check
-- `print_model_summary(model_id)` - Human-readable summary
-
----
-
-## Design Principles
-
-### Memory Safety
-
-All models implement aggressive VRAM cleanup:
+### Base Model Interface
 
 ```python
-def unload(self):
-    # Delete model components
-    del self.model
-    del self.processor
+from base_model import AudioCaptioningModel
 
-    # Force garbage collection
-    gc.collect()
-    torch.cuda.empty_cache()
-    torch.cuda.synchronize()
-```
+class MyModelWrapper(AudioCaptioningModel):
+    def load_model(self) -> None:
+        """Load model weights onto GPU."""
+        pass
 
-This prevents OOM errors in sequential evaluation loops (critical for Colab).
+    def generate_caption(self, audio_path: str, prompt: str) -> str:
+        """Generate caption for audio file."""
+        pass
 
-### Warm-Up Inference
+    def get_memory_requirements(self) -> dict:
+        """Return VRAM requirements."""
+        return {"min_vram_gb": 10.0, "peak_vram_gb": 12.0}
 
-Models perform warm-up inference during `load_model()`:
-
-- JIT-compiles CUDA kernels
-- Stabilizes VRAM usage
-- Ensures accurate peak memory measurements
-- Prevents first-inference slowdowns
-
-### Error Handling
-
-All methods include comprehensive error handling:
-
-- Pre-flight VRAM checks before loading
-- File existence validation
-- Model state verification
-- Informative error messages with resolution steps
-
----
-
-## Memory Requirements
-
-| Model      | Min VRAM | Peak VRAM | Precision |
-|------------|----------|-----------|-----------|
-| NatureLM   | 8.5GB    | 10.0GB    | bfloat16  |
-| SALMONN    | TBD      | ~16GB     | TBD       |
-
-**Note:** All requirements include 10% safety margin for stability.
-
----
-
-## Troubleshooting
-
-### HuggingFace Authentication Errors
-
-```
-ERROR: Cannot access EarthSpeciesProject/NatureLM-audio
-```
-
-**Solution:**
-1. Request Llama-3.1 access: https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct
-2. Set environment variable: `export HF_TOKEN="your_token"`
-3. Run: `huggingface-cli login`
-
-### Out of Memory (OOM)
-
-```
-RuntimeError: CUDA out of memory
-```
-
-**Solution:**
-1. Check available VRAM: `model.check_memory_availability()`
-2. Use smaller models or reduce batch size
-3. Ensure `model.unload()` is called between evaluations
-4. Restart Python kernel to clear fragmented memory
-
-### Import Errors
-
-```
-ImportError: No module named 'NatureLM'
-```
-
-**Solution:**
-Install NatureLM package:
-```bash
-git clone https://github.com/earthspecies/NatureLM-audio
-cd NatureLM-audio
-pip install -e .[gpu]
+    def unload(self) -> None:
+        """Free GPU memory."""
+        pass
 ```
 
 ---
 
-## Roadmap
+## Known Issues
 
-### Phase 1: Core Abstraction (COMPLETE ✅)
-- ✅ Abstract base class (`base_model.py`)
-- ✅ NatureLM wrapper (`naturelm_wrapper.py`)
-- ✅ Model registry (`model_registry.py`)
+### NatureLM Timestamp Annotations
+NatureLM outputs include timestamp annotations for longer audio:
+```
+American Woodcock calling...
+#10.00s - 20.00s#: American Woodcock
+#20.00s - 30.00s#: American Woodcock calling...
+```
+The SPIDEr notebook automatically preprocesses these before scoring.
 
-### Phase 2: SALMONN Integration (COMPLETE ✅)
-- ✅ SALMONN wrapper implementation (`salmonn_wrapper.py`)
-- ✅ 8-bit quantization support for A100
-- ✅ Validation and testing
+### Colab Fixes Required
+1. **Pillow**: Upgrade to >=10.0.0, restart runtime
+2. **NatureLM imports**: Patch Qformer.py for transformers>=4.40
 
-### Phase 3: Universal Evaluator (COMPLETE ✅)
-- ✅ Model-agnostic evaluation framework (`universal_evaluator.py`)
-- ✅ Checkpoint/resume functionality
-- ✅ AnimalSpeak SPIDEr benchmark integration (500 samples)
+See `colab_orchestrator.ipynb` Step 2-3 for automatic fixes.
 
-### Phase 4: Colab Orchestration (COMPLETE ✅)
-- ✅ Production-ready Colab notebook (`colab_orchestrator.ipynb`)
-- ✅ Pipeline validation suite (`validate_pipeline.py`)
-- ✅ Automated memory management and cleanup
+---
+
+## Related Projects
+
+- **Parent Project**: [AcousticLLMEval](https://github.com/Ray149s/AcousticLLMEval) - Gemini Flash/Pro evaluation
+- **NatureLM**: [earthspecies/NatureLM-audio](https://github.com/earthspecies/NatureLM-audio)
+- **Qwen2-Audio**: [QwenLM/Qwen2-Audio](https://github.com/QwenLM/Qwen2-Audio)
 
 ---
 
@@ -317,12 +215,6 @@ This project is part of the AcousticLLMEval research initiative.
 
 ## References
 
-- **NatureLM-audio**: Robinson, D., Miron, M., Hagiwara, M., & Pietquin, O. (2025). NatureLM-audio: An Audio-Language Foundation Model for Bioacoustics. ICLR 2025.
-- **HuggingFace Model**: https://huggingface.co/EarthSpeciesProject/NatureLM-audio
-- **GitHub Repository**: https://github.com/earthspecies/NatureLM-audio
-
----
-
-## Contact
-
-For issues or questions about this framework, please refer to the main AcousticLLMEval project documentation.
+- **NatureLM-audio**: Robinson, D., et al. (2025). NatureLM-audio: An Audio-Language Foundation Model for Bioacoustics. ICLR 2025.
+- **Qwen2-Audio**: Chu, Y., et al. (2024). Qwen2-Audio Technical Report. arXiv:2407.10759.
+- **SALMONN**: Tang, C., et al. (2024). SALMONN: Towards Generic Hearing Abilities for Large Language Models. ICLR 2024.
