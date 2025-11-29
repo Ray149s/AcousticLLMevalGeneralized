@@ -205,14 +205,41 @@ class SalmonnWrapperFixed(AudioCaptioningModel):
         paths["whisper"] = self.whisper_path
         print(f"[OK] Whisper: {self.whisper_path}")
 
-        # Download BEATs
+        # Download BEATs - try multiple sources
         if self.beats_path is None:
             print("[DOWNLOADING] BEATs checkpoint...")
-            self.beats_path = hf_hub_download(
-                self.BEATS_REPO,
-                "BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt",
-                local_dir=str(self.salmonn_repo_path / "beats")
-            )
+            # Check common cache locations first
+            beats_cache_paths = [
+                Path.home() / ".cache" / "salmonn" / "BEATs_iter3_plus_AS2M.pt",
+                Path.home() / ".cache" / "salmonn" / "BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt",
+                self.salmonn_repo_path / "beats" / "BEATs_iter3_plus_AS2M.pt",
+            ]
+            for cache_path in beats_cache_paths:
+                if cache_path.exists():
+                    print(f"[OK] Found cached BEATs at: {cache_path}")
+                    self.beats_path = str(cache_path)
+                    break
+
+            # If not found, try downloading from HuggingFace
+            if self.beats_path is None:
+                try:
+                    # Try tsinghua-ee/SALMONN repo first (has beats folder)
+                    self.beats_path = hf_hub_download(
+                        "tsinghua-ee/SALMONN",
+                        "beats/BEATs_iter3_plus_AS2M.pt",
+                        local_dir=str(self.salmonn_repo_path)
+                    )
+                except Exception as e:
+                    print(f"[WARNING] Could not download BEATs from HF: {e}")
+                    # Create directory and download directly from GitHub releases
+                    beats_dir = self.salmonn_repo_path / "beats"
+                    beats_dir.mkdir(parents=True, exist_ok=True)
+                    beats_url = "https://github.com/microsoft/unilm/releases/download/beats/BEATs_iter3_plus_AS2M.pt"
+                    beats_file = beats_dir / "BEATs_iter3_plus_AS2M.pt"
+                    print(f"[DOWNLOADING] BEATs from GitHub: {beats_url}")
+                    import urllib.request
+                    urllib.request.urlretrieve(beats_url, beats_file)
+                    self.beats_path = str(beats_file)
         paths["beats"] = self.beats_path
         print(f"[OK] BEATs: {self.beats_path}")
 
