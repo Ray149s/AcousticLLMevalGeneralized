@@ -4,31 +4,43 @@
 
 **GitHub Repo:** https://github.com/Ray149s/AcousticLLMevalGeneralized
 
-**Last Updated:** 2025-11-29 (Full evaluation completed)
+**Last Updated:** 2025-11-29 (Project cleanup completed)
 
 ---
 
 ## What Was Built
 A generalized bioacoustic LLM evaluation framework supporting:
-- **NatureLM** (~10GB, bfloat16) - Earth Species Project ✅ FULL EVAL COMPLETE
-- **SALMONN** (~29GB, FP16) - ByteDance/Tsinghua ⚠️ FUTURE WORK
 - **Qwen2-Audio-7B** (~14GB, BF16) - Alibaba Qwen ✅ FULL EVAL COMPLETE
+- **NatureLM** (~10GB, bfloat16) - Earth Species Project ✅ FULL EVAL COMPLETE
+- **SALMONN** (~29GB, FP16) - ByteDance/Tsinghua ⚠️ FUTURE WORK (in `salmonn_future_work/`)
 
-## Key Files
-| File | Purpose |
-|------|---------|
-| `base_model.py` | Abstract interface all wrappers inherit from |
-| `naturelm_wrapper.py` | NatureLM implementation (FIXED) |
-| `salmonn_wrapper.py` | SALMONN implementation (marked as future work) |
-| `qwen_wrapper.py` | Qwen2-Audio-7B implementation (FIXED) |
-| `universal_evaluator.py` | Model-agnostic evaluation with checkpoint/resume |
-| `model_registry.py` | Centralized model management |
-| `colab_orchestrator.ipynb` | Main Colab notebook (UPDATED with all fixes) |
-| `animalspeak_spider_benchmark.jsonl` | 500-sample benchmark dataset |
-| `prompt_config.py` | 4 prompt roles + 3 shot configs (matches Gemini) |
-| `run_full_evaluation.py` | Full 24-config evaluation runner |
-| `SETUP_INSTRUCTIONS.md` | Lambda H100 setup with all dependency fixes |
-| `requirements_eval_env.txt` | Frozen requirements from working environment |
+## Project Structure (Cleaned Up)
+```
+AcousticLLMevalGeneralized/
+├── base_model.py                      # Abstract interface for model wrappers
+├── qwen_wrapper.py                    # Qwen2-Audio-7B-Instruct wrapper
+├── naturelm_wrapper.py                # NatureLM-audio wrapper
+├── prompt_config.py                   # 4 prompt roles + 3 shot configurations
+├── run_full_evaluation.py             # Main evaluation runner
+├── colab_orchestrator.ipynb           # Google Colab notebook for evaluation
+├── compute_spider_colab.ipynb         # Multi-model SPIDEr scoring notebook
+├── animalspeak_spider_benchmark.jsonl # Benchmark dataset (500 samples)
+├── requirements_eval_env.txt          # Tested dependencies (Lambda H100)
+├── README.md                          # Updated project documentation
+├── SETUP_INSTRUCTIONS.md              # Lambda H100 setup guide
+├── CONTEXT_HANDOFF.md                 # This file
+├── outputs/
+│   └── lambda_full_eval/              # 24 result JSON files + manifest
+└── salmonn_future_work/               # SALMONN implementation (future work)
+    ├── salmonn_wrapper.py
+    ├── salmonn_wrapper_fixed.py
+    ├── SALMONN_FIX_DOCUMENTATION.md
+    ├── test_salmonn_fix.py
+    ├── run_salmonn_benchmark_test.py
+    └── requirements_salmonn.txt
+```
+
+**Removed (redundant):** `__init__.py`, `load_animalspeak.py`, `model_registry.py`, `universal_evaluator.py`, `requirements.txt`
 
 ---
 
@@ -37,7 +49,7 @@ A generalized bioacoustic LLM evaluation framework supporting:
 ### Summary
 | Metric | Value |
 |--------|-------|
-| **Total Configurations** | 24 (2 models × 4 prompts × 3 shots) |
+| **Total Configurations** | 24 (2 models x 4 prompts x 3 shots) |
 | **Samples per Config** | 500 |
 | **Total Predictions** | 24,000 |
 | **Success Rate** | 100% (all 500/500) |
@@ -78,33 +90,50 @@ A generalized bioacoustic LLM evaluation framework supporting:
 | naturelm_multi-taxa_5shot | 500/500 | 1.43s |
 
 ### Results Location
-**Local:** `C:\Users\Raymond\Documents\School\UCSD\Courses\2025 Fall\GenAI\AcousticLLMevalGeneralized\outputs\lambda_full_eval\`
-
-**Files:**
+**Local:** `outputs/lambda_full_eval/`
 - 24 result JSON files (one per config)
 - 1 evaluation_manifest.json
 
 ---
 
-## Colab Notebook Fixes (2025-11-29)
+## SPIDEr Notebook (Generalized)
+
+**File:** `compute_spider_colab.ipynb`
+
+### Features
+- Supports multiple models (Qwen, NatureLM, Gemini, future models)
+- Auto-detects model from filename pattern
+- Preprocesses NatureLM outputs (removes timestamp annotations)
+- Verification step shows before/after preprocessing
+- Generates per-model and combined JSON outputs
+- Includes visualization (bar chart, line chart)
+
+### Usage
+1. Upload to Google Colab
+2. Upload all `*_results.json` files
+3. Run all cells
+4. Download SPIDEr scores
+
+### NatureLM Preprocessing
+Automatically extracts first caption, removing timestamps:
+```
+BEFORE: "American Woodcock calling...\n#10.00s - 20.00s#: American Woodcock\n..."
+AFTER:  "American Woodcock calling..."
+```
+
+---
+
+## Colab Notebook Fixes
 
 ### Issue 1: Pillow Version
 **Error:** `cannot import name '_Ink' from 'PIL._typing'`
-**Fix:** Step 2 now installs `Pillow>=10.0.0` and prompts for runtime restart
+**Fix:** Step 2 installs `Pillow>=10.0.0` + runtime restart
 
 ### Issue 2: NatureLM transformers Compatibility
 **Error:** `cannot import name 'apply_chunking_to_forward' from 'transformers.modeling_utils'`
-**Root Cause:** transformers>=4.40 moved functions from `modeling_utils` to `pytorch_utils`
+**Fix:** Step 3 patches Qformer.py (functions moved to `pytorch_utils`)
 
-**Fix:** Step 3 now patches NatureLM's Qformer.py:
-```python
-# Functions moved to pytorch_utils:
-- apply_chunking_to_forward
-- find_pruneable_heads_and_indices
-- prune_linear_layer
-```
-
-### Colab Workflow (Working)
+### Colab Workflow
 1. Step 1 - GPU check, mount Drive
 2. Step 2 - Install deps → **RESTART RUNTIME**
 3. Step 3 - Clone repos + auto-patch NatureLM
@@ -115,81 +144,32 @@ A generalized bioacoustic LLM evaluation framework supporting:
 
 ---
 
-## Testing Infrastructure
+## Infrastructure
 
-### Lambda Labs H100 (Used for full evaluation)
-- **SSH:** `ssh ubuntu@192.222.52.233` (instance may be terminated)
-- **Virtual env:** `source ~/AcousticLLMevalGeneralized/eval_env/bin/activate`
-- **Results:** `~/AcousticLLMevalGeneralized/outputs/full_eval/`
+### Lambda Labs H100 (TERMINATED)
+- Full evaluation completed, results downloaded
+- Instance can be safely terminated
 
-### Environment Setup (Lambda)
-```bash
-cd ~/AcousticLLMevalGeneralized
-python3 -m venv eval_env
-source eval_env/bin/activate
-pip install -r requirements_eval_env.txt
-pip install --no-deps -e ~/NatureLM-audio
-```
+### VRAM Requirements
+| Model | VRAM | Status |
+|-------|------|--------|
+| Qwen2-Audio | ~14GB | Working |
+| NatureLM | ~10GB | Working |
+| SALMONN | ~29GB | Future Work |
 
 ---
 
-## Fixes Applied
+## Execution Plan Status
 
-### 1. Qwen-Audio Wrapper (CRITICAL FIX)
-**Problem:** Original wrapper used wrong API - processor ignored `audios` parameter
-
-**Fix:** Complete rewrite using conversation format
-```python
-conversation = [{"role": "user", "content": [
-    {"type": "audio", "audio": audio},
-    {"type": "text", "text": prompt}
-]}]
-text = self.processor.apply_chat_template(conversation, ...)
-inputs = self.processor(text=text, audios=[audio], ...)
-```
-
-### 2. NatureLM Wrapper (CRITICAL FIX)
-**Problem:** Device/dtype mismatch + transformers API changes
-
-**Fix:**
-- Explicit device and dtype handling
-- Patch Qformer.py imports for transformers>=4.40
-
-### 3. SALMONN (FUTURE WORK)
-Root cause identified (version mismatch) but requires separate environment.
-See `SALMONN_FIX_DOCUMENTATION.md` for details.
-
----
-
-## VRAM Requirements
-
-| Model | VRAM | Device Tested |
-|-------|------|---------------|
-| Qwen2-Audio | ~14GB | Lambda H100 80GB |
-| NatureLM | ~10GB | Lambda H100 80GB |
-| SALMONN | ~29GB | Lambda H100 80GB |
-
----
-
-## Next Steps
-
-### P2: Compute SPIDEr Scores (PENDING)
-- Use `compute_spider_colab.ipynb` or local script
-- Requires SPICE/METEOR dependencies (Java)
-- Compare against Gemini Pro/Flash baselines
-
-### P3: Generate Final Report (PENDING)
-- Publication-quality figures
-- Statistical analysis of model performance
-- Comparison tables across all configurations
-
----
-
-## Parent Project
-Original Gemini evaluation: `C:\Users\Raymond\Documents\School\UCSD\Courses\2025 Fall\GenAI\AcousticLLMEval`
-
-## Project Goal
-Generalize Gemini evaluation pipeline to open-weights models (Qwen, NatureLM, SALMONN)
+| Priority | Task | Status |
+|----------|------|--------|
+| P0 | SALMONN Fix | FUTURE WORK (files in `salmonn_future_work/`) |
+| P0.5 | Prompt Roles & Shots | ✅ COMPLETE |
+| P1 | Full Evaluation (24,000 predictions) | ✅ COMPLETE |
+| P1.5 | SPIDEr Notebook Generalization | ✅ COMPLETE |
+| P1.6 | Project Cleanup & README Update | ✅ COMPLETE |
+| P2 | SPIDEr Score Computation | IN PROGRESS |
+| P3 | Final Report & Figures | PENDING |
 
 ---
 
@@ -201,34 +181,28 @@ Generalize Gemini evaluation pipeline to open-weights models (Qwen, NatureLM, SA
 | 2025-11-28 | Lambda H100 testing, fixed Qwen & NatureLM, SALMONN diagnosed |
 | 2025-11-28 | Prompt roles & shots implemented (P0.5 complete) |
 | 2025-11-29 | **FULL EVALUATION COMPLETE** - 24,000 predictions, results downloaded |
-
-## Execution Plan Status
-
-| Priority | Task | Status |
-|----------|------|--------|
-| P0 | SALMONN Fix | FUTURE WORK |
-| P0.5 | Prompt Roles & Shots | ✅ COMPLETE |
-| P1 | Full Evaluation (500 samples × 24 configs) | ✅ COMPLETE |
-| P2 | SPIDEr Score Computation | PENDING |
-| P3 | Final Report & Figures | PENDING |
+| 2025-11-29 | SPIDEr notebook generalized for multi-model support |
+| 2025-11-29 | Project cleanup: removed 5 redundant files, moved SALMONN to subdirectory |
+| 2025-11-29 | README updated, GitHub pushed |
 
 ---
 
-## Quick Reference
+## Next Steps
 
-### Run Full Evaluation (Lambda)
-```bash
-source ~/AcousticLLMevalGeneralized/eval_env/bin/activate
-cd ~/AcousticLLMevalGeneralized
-python run_full_evaluation.py --models qwen naturelm --output-dir ./outputs/full_eval
-```
+### P2: Compute SPIDEr Scores (IN PROGRESS)
+- Upload results to `compute_spider_colab.ipynb`
+- SPICE computation takes ~2-5 min per config (~1-2 hours total)
+- Compare against Gemini Pro/Flash baselines
 
-### Download Results to Local
-```bash
-scp -r ubuntu@192.222.52.233:~/AcousticLLMevalGeneralized/outputs/full_eval/* ./outputs/lambda_full_eval/
-```
+### P3: Generate Final Report
+- Publication-quality figures
+- Statistical analysis of model performance
+- Comparison tables across all configurations
 
-### Colab Quick Start
-1. Open `colab_orchestrator.ipynb` in Google Colab
-2. Set runtime to A100 GPU
-3. Run all cells in order (restart after Step 2)
+---
+
+## Parent Project
+Original Gemini evaluation: `C:\Users\Raymond\Documents\School\UCSD\Courses\2025 Fall\GenAI\AcousticLLMEval`
+
+## Project Goal
+Generalize Gemini evaluation pipeline to open-weights models (Qwen, NatureLM)
